@@ -8,6 +8,14 @@ build = "build.rs"
 winres = "0.1.12"
 
 [dependencies]
+anyhow = "1"
+clap = { version = "4", features = ["derive"] }
+walkdir = "2"
+blake3 = "1"
+md-5 = "0.11.0-rc.2"
+sha2 = "0.11.0-rc.2"
+sha1 = "0.11.0-rc.2"
+hex = "0.4"
 
 [profile.release]
 opt-level = 3
