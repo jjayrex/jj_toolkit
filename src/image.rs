@@ -2,15 +2,22 @@ use anyhow::{bail, Context, Result};
 use clap::{Args, Subcommand, ValueEnum};
 use std::fs::File;
 use std::path::{Path, PathBuf};
-use image::ImageEncoder;
+use image::{GenericImageView, ImageEncoder};
 
 #[derive(Subcommand)]
 pub enum ImageCmd {
     Convert(ConvertArgs),
+    Scale(ScaleArgs),
 }
 
 #[derive(Clone, Copy, ValueEnum, Debug)]
 pub enum ImageFormat { Png, Jpeg, Webp, Bmp, Ico, Tiff, Tga, Dds, Pnm }
+
+#[derive(Clone, Copy, ValueEnum, Debug)]
+pub enum ResizeMode { Fit, Fill, Exact }
+
+#[derive(Clone, Copy, ValueEnum, Debug)]
+pub enum Filter { Nearest, Triangle, CatmullRom, Gaussian, Lanczos3 }
 
 #[derive(Args)]
 pub struct ConvertArgs {
@@ -27,9 +34,29 @@ pub struct ConvertArgs {
     pub background: String,
 }
 
+#[derive(Args)]
+pub struct ScaleArgs {
+    pub input: PathBuf,
+    #[arg(short, long)]
+    pub percent: Option<u32>,
+    #[arg(long)]
+    pub width: Option<u32>,
+    #[arg(long)]
+    pub height: Option<u32>,
+    // fit | fill | exact
+    #[arg(long, value_enum, default_value_t = ResizeMode::Fit)]
+    pub mode: ResizeMode,
+    // Resampling filter
+    #[arg(long, value_enum, default_value_t = Filter::Lanczos3)]
+    pub filter: Filter,
+    #[arg(short, long)]
+    pub output: Option<PathBuf>,
+}
+
 pub fn run(cmd: ImageCmd) -> Result<()> {
     match cmd {
         ImageCmd::Convert(a) => convert_cmd(a),
+        ImageCmd::Scale(a) => scale_cmd(a),
     }
 }
 
@@ -58,6 +85,41 @@ fn convert_cmd(a: ConvertArgs) -> Result<()> {
         ImageFormat::Webp => save_webp(&image, &output)?,
     }
 
+    println!("Wrote {}", output.display());
+    Ok(())
+}
+
+fn scale_cmd(a: ScaleArgs) -> Result<()> {
+    use image::imageops::resize;
+    let image = image::open(&a.input).with_context(|| format!("open {}", a.input.display()))?;
+    let (w, h) = image.dimensions();
+
+    // Determine target size
+    let (tw, th) = compute_target_size(w, h, a.percent, a.width, a.height)?;
+    let f = filter_to_type(a.filter);
+
+    let output_image = match a.mode {
+        ResizeMode::Exact => resize(&image, tw, th, f),
+        ResizeMode::Fit => {
+            resize(&image, tw, th, f)
+        }
+        ResizeMode::Fill => {
+            // scale to cover and then center-crop
+            let (cw, ch) = cover_size(w, h, tw, th);
+            let tmp = resize(&image, cw, ch, f);
+            let x = (cw.saturating_sub(tw)) / 2;
+            let y = (ch.saturating_sub(th)) / 2;
+            image::imageops::crop_imm(&tmp, x, y, tw, th).to_image()
+        }
+    };
+
+    let output = a.output.unwrap_or_else(|| {
+        let stem = a.input.file_stem().map(|s| s.to_string_lossy().into_owned()).unwrap_or_else(|| "output".into());
+        let ext = a.input.extension().map(|s| s.to_string_lossy().into_owned()).unwrap_or_else(|| "png".into());
+        PathBuf::from(format!("{}_{}x{}.{}", stem, tw, th, ext))
+    });
+
+    output_image.save(&output)?;
     println!("Wrote {}", output.display());
     Ok(())
 }
@@ -147,4 +209,57 @@ fn flatten_to_rgb8(image: &image::DynamicImage, bg: (u8,u8,u8)) -> image::ImageB
         output.put_pixel(x, y, image::Rgb([nr, ng, nb]));
     }
     output
+}
+
+fn filter_to_type(f: Filter) -> image::imageops::FilterType {
+    use image::imageops::FilterType;
+    match f {
+        Filter::Nearest => FilterType::Nearest,
+        Filter::Triangle => FilterType::Triangle,
+        Filter::CatmullRom => FilterType::CatmullRom,
+        Filter::Gaussian => FilterType::Gaussian,
+        Filter::Lanczos3 => FilterType::Lanczos3,
+    }
+}
+
+fn compute_target_size(
+    w: u32, h: u32,
+    percent: Option<u32>, width: Option<u32>, height: Option<u32>
+) -> Result<(u32, u32)> {
+    if percent.is_none() && width.is_none() && height.is_none() {
+        bail!("provide --percent or --width/--height");
+    }
+    if let Some(p) = percent {
+        if width.is_none() && height.is_none() {
+            let s = (p as f32) / 100.0;
+            return Ok(((w as f32 * s).round().max(1.0) as u32,
+                       (h as f32 * s).round().max(1.0) as u32));
+        }
+    }
+    match (width, height) {
+        (Some(tw), Some(th)) => Ok((tw, th)),
+        (Some(tw), None) => {
+            let th = ((tw as f32) * (h as f32) / (w as f32)).round().max(1.0) as u32;
+            Ok((tw, th))
+        }
+        (None, Some(th)) => {
+            let tw = ((th as f32) * (w as f32) / (h as f32)).round().max(1.0) as u32;
+            Ok((tw, th))
+        }
+        (None, None) => unreachable!(),
+    }
+}
+
+fn cover_size(w: u32, h: u32, tw: u32, th: u32) -> (u32, u32) {
+    let sr = w as f32 / h as f32;
+    let tr = tw as f32 / th as f32;
+    if sr > tr {
+        // source wider: scale by height
+        let scale = th as f32 / h as f32;
+        ((w as f32 * scale).round() as u32, th)
+    } else {
+        // source taller: scale by width
+        let scale = tw as f32 / w as f32;
+        (tw, (h as f32 * scale).round() as u32)
+    }
 }

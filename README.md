@@ -27,14 +27,14 @@ Usage:
 
 **Options**
 
-| Flag                          | Description                                                              |
-|-------------------------------| ------------------------------------------------------------------------ |
-| `-a, --algorithm <ALGORITHM>` | Hashing algorithm (`blake3`, `sha256`, `sha1`, `md5`). Default: `blake3` |
-| `-o, --output <OUTPUT>`       | Write output to file instead of stdout                                   |
-| `-e, --expected <EXPECTED>`   | Expected hash string for `verify-file`                                   |
-| `--expected-file <MANIFEST>`  | Manifest file to verify against                                          |
-| `-h, --help`                  | Show help                                                                |
-| `-V, --version`               | Show version                                                             |
+| Flag                          | Description                                                            |
+|-------------------------------|------------------------------------------------------------------------|
+| `-a, --algorithm <ALGORITHM>` | Hashing algorithm: `blake3`, `sha256`, `sha1`, `md5` Default: `blake3` |
+| `-o, --output <OUTPUT>`       | Write output to file instead of stdout                                 |
+| `-e, --expected <EXPECTED>`   | Expected hash string for `verify-file`                                 |
+| `--expected-file <MANIFEST>`  | Manifest file to verify against                                        |
+| `-h, --help`                  | Show help                                                              |
+| `-V, --version`               | Show version                                                           |
 
 **Behavior**
 
@@ -68,6 +68,7 @@ Tools for working with images.
 ```
 Usage:
   jj_toolkit image convert [OPTIONS] <INPUT> --format <FORMAT>
+  jj_toolkit image scale [OPTIONS] <INPUT>
 ```
 
 **Arguments**
@@ -78,13 +79,26 @@ Usage:
 
 **Options**
 
+### convert
 | Flag                    | Description                                                                     |
 |-------------------------|---------------------------------------------------------------------------------|
 | `-f, --format <FORMAT>` | Target format: `png`, `jpeg`, `webp`, `bmp`, `ico`, `tiff`, `tga`, `dds`, `pnm` |
 | `-o, --output <OUTPUT>` | Output path. Default: `<INPUT>.<FORMAT>`                                        |
-| `--quality <1-100>`     | Encoding quality for JPEG. Default: `90`                                   |
+| `--quality <1-100>`     | Encoding quality for JPEG. Default: `90`                                        |
 | `--background <RRGGBB>` | Background color for flattening alpha when saving JPEG. Default: `FFFFFF`       |
 | `-h, --help`            | Show help                                                                       |
+
+### scale
+| Flag                      | Description                                                                                        |
+|---------------------------|----------------------------------------------------------------------------------------------------|
+| `-p, --percent <PERCENT>` | Scale the image by a percentage of the original image.                                             |
+| `-o, --output <OUTPUT>`   | Output path. Default: `<INPUT>.<FORMAT>`                                                           |
+| `--width <WIDTH>`         | Target width. If it is omitted, then one is inferred.                                              |
+| `--height <HEIGHT>`       | Target height. If it is omitted, then one is inferred.                                             |
+| `--mode <MODE>`           | Resizing mode: `fit`, `fill`, `exact` Default: `fit`                                                |
+| `--filter <FILTER>`       | Resampling filter: `lanczos3`, `nearest`, `triangle`, `catmullrom`, `gaussian` Default: `lanczos3` |
+| `-h, --help`              | Show help                                                                                          |
+
 
 **Examples**
 
@@ -95,6 +109,19 @@ jj_toolkit image convert logo.png --format jpeg --quality 92 --background 000000
 # JPG → WebP
 jj_toolkit image convert photo.jpg -f webp --quality 85
 
-# Any → PNG with default name <stem>.png
+# Any → PNG with default name.png
 jj_toolkit image convert sprite.webp -f png
+
+# Half size with Lanczos3
+jj_toolkit image scale photo.png --percent 50
+
+# Fit into 1920x1080 bounding box
+jj_toolkit image scale bg.jpg --width 1920 --height 1080 --mode fit
+
+# Fill 1080x1080 square, cropping center
+jj_toolkit image scale cover.jpg --width 1080 --height 1080 --mode fill
+
+# Exact 800x600 ignoring aspect with Triangle filter
+jj_toolkit image scale ui.png --width 800 --height 600 --mode exact --filter triangle
+
 ```
