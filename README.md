@@ -4,7 +4,7 @@ A personal multi-functional CLI toolkit for common file operations.
 
 ### Modules
 
-#### `hash`
+### `hash`
 
 Tools for file hashing and hash verification.
 
@@ -59,4 +59,42 @@ jj_toolkit hash verify-file my.iso -e f3a0c...
 
 # Verify a folder using its manifest
 jj_toolkit hash verify-dir mydata.blake3
+```
+
+### `image`
+
+Tools for working with images.
+
+```
+Usage:
+  jj_toolkit image convert [OPTIONS] <INPUT> --format <FORMAT>
+```
+
+**Arguments**
+
+| Name      | Description              |
+| --------- | ------------------------ |
+| `<INPUT>` | Path to the source image |
+
+**Options**
+
+| Flag                    | Description                                                                     |
+|-------------------------|---------------------------------------------------------------------------------|
+| `-f, --format <FORMAT>` | Target format: `png`, `jpeg`, `webp`, `bmp`, `ico`, `tiff`, `tga`, `dds`, `pnm` |
+| `-o, --output <OUTPUT>` | Output path. Default: `<INPUT>.<FORMAT>`                                        |
+| `--quality <1-100>`     | Encoding quality for JPEG. Default: `90`                                   |
+| `--background <RRGGBB>` | Background color for flattening alpha when saving JPEG. Default: `FFFFFF`       |
+| `-h, --help`            | Show help                                                                       |
+
+**Examples**
+
+```bash
+# PNG → JPEG with custom quality and black background (for transparency)
+jj_toolkit image convert logo.png --format jpeg --quality 92 --background 000000 --output logo.jpg
+
+# JPG → WebP
+jj_toolkit image convert photo.jpg -f webp --quality 85
+
+# Any → PNG with default name <stem>.png
+jj_toolkit image convert sprite.webp -f png
 ```

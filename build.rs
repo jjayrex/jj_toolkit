@@ -3,7 +3,7 @@ fn main() {
     res.set("FileDescription", "A multi-functional toolkit");
     res.set("ProductName", "JJ-Toolkit");
     res.set("LegalCopyright", "JJayRex");
-    res.set("FileVersion", "0.2.0.0");
-    res.set("ProductVersion", "0.2.0.0");
+    res.set("FileVersion", "0.3.0.0");
+    res.set("ProductVersion", "0.3.0.0");
     res.compile().unwrap();
 }
