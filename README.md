@@ -125,3 +125,54 @@ jj_toolkit image scale cover.jpg --width 1080 --height 1080 --mode fill
 jj_toolkit image scale ui.png --width 800 --height 600 --mode exact --filter triangle
 
 ```
+
+### `crypt`
+
+Tools for file encryption/decryption.
+
+```
+Usage:
+  jj_toolkit crypt encrypt [OPTIONS] <INPUT>>
+  jj_toolkit crypt decrypt [OPTIONS] <INPUT>
+```
+
+**Arguments**
+
+| Name      | Description             |
+| --------- |-------------------------|
+| `<INPUT>` | Path to the source file |
+
+**Options**
+
+### encrypt
+| Flag                        | Description                               |
+|-----------------------------|-------------------------------------------|
+| `--m-cost-kib <M_COST_KIB>` | Argon2 memory cost in KiB. Default: 19456 |
+| `--t-cost <T_COST>`         | Argon2 time cost. Default: 2              |
+| `--p-cost <P_COST>`         | Argon2 parallelism cost. Default: 1       |
+| `-o, --output <OUTPUT>`     | Output path. Default: `<INPUT>.jj`        |
+| `-h, --help`                | Show help                                 |
+
+### decrypt
+| Flag                      | Description                                                                                        |
+|---------------------------|----------------------------------------------------------------------------------------------------|
+| `-o, --output <OUTPUT>`   | Output path. Default: `<INPUT>.<FORMAT>`                                                           |
+| `-h, --help`              | Show help                                                                                          |
+
+
+**Examples**
+
+```bash
+# items.json -> items.jj
+jj_toolkit crypt encrypt items.json
+
+# Data.csv encrypted to custom output
+jj_toolkit crypt encrypt data.csv -o data.enc
+
+# Decrypting inventory to a file with original extension
+jj_toolkit crypt decrypt inventory.jj
+
+# Decrypting to file to custom output
+jj_toolkit crypt decrypt file.jj -o file.txt
+
+```
