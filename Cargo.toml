@@ -1,6 +1,6 @@
 [package]
 name = "jj_toolkit"
-version = "0.4.0"
+version = "0.5.0"
 edition = "2024"
 build = "build.rs"
 
@@ -19,9 +19,11 @@ hex = "0.4"
 image = { version = "0.25", default-features = false, features = ["png", "jpeg", "webp", "bmp", "ico", "tiff", "tga", "dds", "pnm"] }
 argon2 = "0.6.0-rc.2"
 rpassword = "7.4"
-rand = "0.10.0-rc.1"
-chacha20poly1305 = "0.10"
+rand = "0.10.0-rc.5"
+chacha20poly1305 = { version = "0.10", features = ["stream"] }
 zeroize = "1.8"
+tar = "0.4"
+zstd = { version = "0.13", default-features = false, features = ["zstdmt"] }
 
 [profile.release]
 opt-level = 3
