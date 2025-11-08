@@ -3,6 +3,7 @@ name = "jj_toolkit"
 version = "0.5.0"
 edition = "2024"
 build = "build.rs"
+authors = ["JJayRex"]
 
 [build-dependencies]
 winres = "0.1.12"

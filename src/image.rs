@@ -1,14 +1,8 @@
 use anyhow::{bail, Context, Result};
-use clap::{Args, Subcommand, ValueEnum};
+use clap::{Args, ValueEnum};
 use std::fs::File;
 use std::path::{Path, PathBuf};
 use image::{GenericImageView, ImageEncoder};
-
-#[derive(Subcommand)]
-pub enum ImageCmd {
-    Convert(ConvertArgs),
-    Scale(ScaleArgs),
-}
 
 #[derive(Clone, Copy, ValueEnum, Debug)]
 pub enum ImageFormat { Png, Jpeg, Webp, Bmp, Ico, Tiff, Tga, Dds, Pnm }
@@ -21,46 +15,39 @@ pub enum Filter { Nearest, Triangle, CatmullRom, Gaussian, Lanczos3 }
 
 #[derive(Args)]
 pub struct ConvertArgs {
-    pub input: PathBuf,
+    input: PathBuf,
     #[arg(short, long, value_enum)]
-    pub format: ImageFormat,
+    format: ImageFormat,
     #[arg(short, long)]
-    pub output: Option<PathBuf>,
+    output: Option<PathBuf>,
     // Quality for JPEG. 1-100. Default: 90
     #[arg(long, default_value_t = 90)]
-    pub quality: u8,
+    quality: u8,
     // Background color for formats without Alpha. Default: FFFFFF
     #[arg(long, default_value = "FFFFFF")]
-    pub background: String,
+    background: String,
 }
 
 #[derive(Args)]
 pub struct ScaleArgs {
-    pub input: PathBuf,
+    input: PathBuf,
     #[arg(short, long)]
-    pub percent: Option<u32>,
+    percent: Option<u32>,
     #[arg(long)]
-    pub width: Option<u32>,
+    width: Option<u32>,
     #[arg(long)]
-    pub height: Option<u32>,
+    height: Option<u32>,
     // fit | fill | exact
     #[arg(long, value_enum, default_value_t = ResizeMode::Fit)]
-    pub mode: ResizeMode,
+    mode: ResizeMode,
     // Resampling filter
     #[arg(long, value_enum, default_value_t = Filter::Lanczos3)]
-    pub filter: Filter,
+    filter: Filter,
     #[arg(short, long)]
-    pub output: Option<PathBuf>,
+    output: Option<PathBuf>,
 }
 
-pub fn run(cmd: ImageCmd) -> Result<()> {
-    match cmd {
-        ImageCmd::Convert(a) => convert_cmd(a),
-        ImageCmd::Scale(a) => scale_cmd(a),
-    }
-}
-
-fn convert_cmd(a: ConvertArgs) -> Result<()> {
+pub fn convert(a: ConvertArgs) -> Result<()> {
     let image = image::open(&a.input)
         .with_context(|| format!("open {}", a.input.display()))?;
     let output = a.output.unwrap_or_else(|| {
@@ -89,7 +76,7 @@ fn convert_cmd(a: ConvertArgs) -> Result<()> {
     Ok(())
 }
 
-fn scale_cmd(a: ScaleArgs) -> Result<()> {
+pub fn scale(a: ScaleArgs) -> Result<()> {
     use image::imageops::resize;
     let image = image::open(&a.input).with_context(|| format!("open {}", a.input.display()))?;
     let (w, h) = image.dimensions();

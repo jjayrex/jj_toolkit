@@ -1,7 +1,7 @@
 use anyhow::{Context, Result, bail, ensure};
 use argon2::{Algorithm, Argon2, Params, Version};
 use chacha20poly1305::{KeyInit, XChaCha20Poly1305, XNonce, aead::Aead};
-use clap::{Args, Subcommand};
+use clap::{Args};
 use rand::TryRngCore;
 use rand::rngs::OsRng;
 use std::ffi::OsStr;
@@ -20,11 +20,6 @@ enum Kind {
     Directory = 1,
 }
 
-#[derive(Subcommand)]
-pub enum CryptCmd {
-    Encrypt(EncryptArgs),
-    Decrypt(DecryptArgs),
-}
 
 #[derive(Args)]
 pub struct EncryptArgs {
@@ -48,14 +43,7 @@ pub struct DecryptArgs {
     output: Option<PathBuf>,
 }
 
-pub fn run(cmd: CryptCmd) -> Result<()> {
-    match cmd {
-        CryptCmd::Encrypt(a) => encrypt(a),
-        CryptCmd::Decrypt(a) => decrypt(a),
-    }
-}
-
-fn encrypt(a: EncryptArgs) -> Result<()> {
+pub fn encrypt(a: EncryptArgs) -> Result<()> {
     let input_path = &a.input;
     let output_path = a.output.clone().unwrap_or_else(|| {
         let mut out = input_path.clone();
@@ -169,7 +157,7 @@ fn encrypt(a: EncryptArgs) -> Result<()> {
     Ok(())
 }
 
-fn decrypt(a: DecryptArgs) -> Result<()> {
+pub fn decrypt(a: DecryptArgs) -> Result<()> {
     let input_path = &a.input;
 
     // Parse header
