@@ -135,22 +135,22 @@ pub fn compress(a: CompressionArgs) -> Result<()> {
 pub fn decompress(a: DecompressionArgs) -> Result<()> {
     if a.input.is_file() {
         let ext = a.input.extension().and_then(|e| e.to_str()).unwrap_or("");
+
         let algorithm = if let Some(alg) = a.algorithm {
             alg
+        } else if let Some(alg) = sniff_magic(&a.input)? {
+            alg
+        } else if let Some(alg) = check_extension(ext) {
+            alg
         } else {
-            match ext {
-                "zst" => Algorithm::Zstd,
-                "lz4" => Algorithm::Lz4,
-                "br" => Algorithm::Brotli,
-                _ => bail!("cannot identify algorithm, specify --algorithm")
-            }
+            bail!("cannot identify compression algorithm")
         };
 
-        // remove only the compression suffix
         let file_name = a.input.file_name().unwrap().to_string_lossy();
-        let output_name = strip_suffix(&file_name, algorithm);
+        let stripped = strip_suffix(&file_name, algorithm);
+        let default_name = if stripped == file_name { format!("{}.out", stripped) } else { stripped };
         let output_path = a.output.unwrap_or_else(|| {
-            a.input.parent().unwrap_or(Path::new("")).join(output_name)
+            a.input.parent().unwrap_or(Path::new("")).join(default_name)
         });
 
         let input_file = File::open(&a.input)?;
@@ -173,37 +173,41 @@ pub fn decompress(a: DecompressionArgs) -> Result<()> {
     } else if a.input.is_dir() {
         if !a.recursive { bail!("'{}' is a directory. Use -r/--recursive.", a.input.display()); }
         let output_root = a.output.clone();
-        if let Some(dir) = &output_root { fs::create_dir_all(dir)?; }
+        if let Some(dir) = &output_root { std::fs::create_dir_all(dir)?; }
 
-        for entry in WalkDir::new(&a.input).into_iter().filter_map(|e| e.ok()) {
+        for entry in walkdir::WalkDir::new(&a.input).into_iter().filter_map(|e| e.ok()) {
             if !entry.file_type().is_file() { continue; }
             let input_path = entry.path();
-            let ext = input_path.extension().and_then(|e| e.to_str()).unwrap_or("");
 
             let per_file_alg = if let Some(alg) = a.algorithm {
-                alg
+                Some(alg)
+            } else if let Ok(Some(alg)) = sniff_magic(input_path) {
+                Some(alg)
             } else {
-                match ext { "zst" => Algorithm::Zstd, "lz4" => Algorithm::Lz4, "br" => Algorithm::Brotli, _ => continue } // skip unknown
+                input_path.extension()
+                    .and_then(|e| e.to_str())
+                    .and_then(check_extension)
             };
+            let Some(alg) = per_file_alg else { continue };
 
             let relative = input_path.strip_prefix(&a.input).unwrap();
             let relative_parent = relative.parent().unwrap_or(Path::new(""));
             let output_dir = if let Some(root) = &output_root {
                 let d = root.join(relative_parent);
-                fs::create_dir_all(&d)?;
-                d
+                std::fs::create_dir_all(&d)?; d
             } else {
                 input_path.parent().unwrap().to_path_buf()
             };
 
-            let input_name = input_path.file_name().unwrap().to_string_lossy();
-            let output_name = strip_suffix(&input_name, per_file_alg);
-            let output_path = output_dir.join(output_name);
+            let in_name = input_path.file_name().unwrap().to_string_lossy();
+            let stripped = strip_suffix(&in_name, alg);
+            let out_name = if stripped == in_name { format!("{}.out", stripped) } else { stripped };
+            let output_path = output_dir.join(out_name);
 
             let input_file = File::open(input_path)?;
             let mut output_file = File::create(&output_path)?;
 
-            match per_file_alg {
+            match alg {
                 Algorithm::Zstd => {
                     println!("Decompressing: {} -> {} with ZSTD", &input_path.display(), &output_path.display());
                     decompress_zstd(&input_file, &mut output_file)?
@@ -225,12 +229,40 @@ pub fn decompress(a: DecompressionArgs) -> Result<()> {
 }
 
 fn strip_suffix(name: &str, alg: Algorithm) -> String {
-    let suf = format!(".{}", alg.extension());
-    if let Some(stripped) = name.strip_suffix(&suf) {
+    let suffix = format!(".{}", alg.extension());
+    if let Some(stripped) = name.strip_suffix(&suffix) {
         stripped.to_string()
     } else {
         name.to_string()
     }
+}
+
+fn check_extension(ext: &str) -> Option<Algorithm> {
+    match ext {
+        "zst" => Some(Algorithm::Zstd),
+        "lz4" => Some(Algorithm::Lz4),
+        "br" => Some(Algorithm::Brotli),
+        _ => None,
+    }
+}
+
+fn sniff_magic(path: &Path) -> Result<Option<Algorithm>> {
+    let mut file = File::open(path)?;
+    let mut buffer = [0u8; 4];
+    let n = file.read(&mut buffer)?;
+    if n < 4 { return Ok(None); }
+
+    // Zstd Magic: 28 B5 2F FD
+    if buffer == [0x28, 0xB5, 0x2F, 0xFD] {
+        return Ok(Some(Algorithm::Zstd));
+    }
+
+    // LZ4 Magic: 04 22 4D 18
+    if buffer == [0x04, 0x22, 0x4D, 0x18] {
+        return Ok(Some(Algorithm::Lz4));
+    }
+
+    Ok(None)
 }
 
 fn compress_zstd(input: &File, output: &File, comp_level: i32, threads: u32) -> Result<()> {
