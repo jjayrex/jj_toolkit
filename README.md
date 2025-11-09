@@ -165,7 +165,7 @@ Encrypt files/directories.
 
 ```
 Usage:
-  jj_toolkit crypt encrypt [OPTIONS] <INPUT>
+  jj_toolkit encrypt [OPTIONS] <INPUT>
 ```
 
 **Arguments**
@@ -201,7 +201,7 @@ Decrypt files/directories.
 
 ```
 Usage:
-  jj_toolkit crypt decrypt [OPTIONS] <INPUT>
+  jj_toolkit decrypt [OPTIONS] <INPUT>
 ```
 
 **Arguments**
@@ -221,9 +221,85 @@ Usage:
 
 ```bash
 # Decrypting inventory to a file with original extension
-jj_toolkit crypt-decrypt inventory.jj
+jj_toolkit decrypt inventory.jj
 
 # Decrypting to file to custom output
-jj_toolkit crypt-decrypt file.jj -o file.txt
+jj_toolkit decrypt file.jj -o file.txt
 
+```
+
+### `compress`
+
+Compress files.
+
+```
+Usage:
+  jj_toolkit compress [OPTIONS] <INPUT>
+```
+
+**Arguments**
+
+| Name      | Description             |
+| --------- |-------------------------|
+| `<INPUT>` | Path to the source file |
+
+**Options**
+
+| Flag                          | Description                                                    |
+|-------------------------------|----------------------------------------------------------------|
+| `-a, --algorithm <ALGORITHM>` | Compression algorithm: `zstd`, `lz4`, `brotli` Default: `zstd` |
+| `-r, --recursive `            | Flag to compress files recursively in a directory              |
+| `-c, --compression_level`     | Compression level: `zstd [-7..22]`, `brotli [0..11]`           |
+| `-t, --threads`               | Number of threads to use for `zstd` compression                |
+| `-o, --output <OUTPUT>`       | Output path. Default: `<INPUT>.<ALGORITHM>`                    |
+| `-h, --help`                  | Show help                                                      |
+
+**Examples**
+
+```bash
+# items.json -> items.lz4
+jj_toolkit compress -a lz4 items.json
+
+# Data.csv compressed with zstd at compression level 12 using 4 threads
+jj_toolkit compress -c 12 -t 4 data.csv
+
+# Compresses the contents of work/ to brotli
+jj_toolkit compress -r -a brotli work
+```
+
+### `decompress`
+
+Decompress files.
+
+```
+Usage:
+  jj_toolkit decompress [OPTIONS] <INPUT>
+```
+
+**Arguments**
+
+| Name      | Description             |
+| --------- |-------------------------|
+| `<INPUT>` | Path to the source file |
+
+**Options**
+
+| Flag                           | Description                                                                  |
+|--------------------------------|------------------------------------------------------------------------------|
+| `-a, --algorithm <ALGORITHM>`  | Compression algorithm in case it cannot me inferred: `zstd`, `lz4`, `brotli` |
+| `-r, --recursive `             | Flag to decompress files recursively in a directory                          |
+| `-o, --output <OUTPUT>`        | Output path. Default: `<INPUT>.<FORMAT>`                                     |
+| `-h, --help`                   | Show help                                                                    |
+
+**Examples**
+
+```bash
+# Decompressing inventory.json.zstd back to inventory.json
+jj_toolkit decompress inventory.json.zstd
+
+# Decompressing file.comp to a custom path using a specified algorithm
+jj_toolkit decompress -a brotli file.comp -o file.txt
+
+# Decompressing files in a specified directory
+jj_toolkit decompress -r docs
 ```
