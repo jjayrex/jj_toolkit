@@ -1,15 +1,15 @@
 use anyhow::{Result, bail};
-use std::path::PathBuf;
-use std::fs::File;
-use std::io;
-use std::io::{Read, Write};
+use std::path::{Path, PathBuf};
+use std::{fs, fs::File};
+use std::{io, io::{Read, Write}};
 use clap::{Args, ValueEnum};
+use walkdir::WalkDir;
 
 #[derive(Args)]
 pub struct CompressionArgs {
     input: PathBuf,
-    // #[arg(short = 'r', long)]
-    // recursive: bool,
+    #[arg(short = 'r', long)]
+    recursive: bool,
     #[arg(short, long, default_value_t = Algorithm::Zstd)]
     algorithm: Algorithm,
     #[arg(short, long, default_value = "5")]
@@ -23,8 +23,8 @@ pub struct CompressionArgs {
 #[derive(Args)]
 pub struct DecompressionArgs {
     input: PathBuf,
-    // #[arg(short = 'r', long)]
-    // recursive: bool,
+    #[arg(short = 'r', long)]
+    recursive: bool,
     #[arg(short, long)]
     algorithm: Option<Algorithm>,
     #[arg(short, long)]
@@ -59,73 +59,177 @@ impl Algorithm {
 }
 
 pub fn compress(a: CompressionArgs) -> Result<()> {
-    let ext = a.input.extension().unwrap().to_str().unwrap();
-    let output_path = a.output.unwrap_or_else(|| {
-        let stem = a.input.file_stem()
-            .map(|s| s.to_string_lossy().into_owned())
-            .unwrap_or_else(|| "output".to_string());
-        PathBuf::from(format!("{}.{}.{}", stem, ext, &a.algorithm.extension()))
-    });
-    let mut input_file = File::open(&a.input)?;
-    let output_file = File::create(&output_path)?;
+    if a.input.is_file() {
+        let ext = a.input.extension().unwrap().to_str().unwrap();
+        let output_path = a.output.unwrap_or_else(|| {
+            let stem = a.input.file_stem()
+                .map(|s| s.to_string_lossy().into_owned())
+                .unwrap_or_else(|| "output".to_string());
+            PathBuf::from(format!("{}.{}.{}", stem, ext, &a.algorithm.extension()))
+        });
+        let mut input_file = File::open(&a.input)?;
+        let output_file = File::create(&output_path)?;
 
-    match a.algorithm {
-        Algorithm::Zstd => {
-            println!("Compressing: {} -> {} with {}@{}", &a.input.display(), &output_path.display(), "ZSTD", a.compression_level);
-            if a.threads.is_some() {
-                compress_zstd(&input_file, &output_file, a.compression_level as i32, a.threads.unwrap())
-            } else {
-                compress_zstd(&input_file, &output_file, a.compression_level as i32, 1)
+        match a.algorithm {
+            Algorithm::Zstd => {
+                println!("Compressing: {} -> {} with {}@{}", &a.input.display(), &output_path.display(), "ZSTD", a.compression_level);
+                compress_zstd(&input_file, &output_file, a.compression_level as i32, a.threads.unwrap_or(1))
             }
-        },
-        Algorithm::Lz4 => {
-            println!("Compressing: {} -> {} with {}", &a.input.display(), &output_path.display(), "LZ4");
-            compress_lz4(&mut input_file, &output_file)
-        },
-        Algorithm::Brotli => {
-            println!("Compressing: {} -> {} with {}@{}", &a.input.display(), &output_path.display(), "Brotli", a.compression_level);
-            compress_brotli(&mut input_file, &output_file, a.compression_level)
-        },
+            Algorithm::Lz4 => {
+                println!("Compressing: {} -> {} with {}", &a.input.display(), &output_path.display(), "LZ4");
+                compress_lz4(&mut input_file, &output_file)
+            }
+            Algorithm::Brotli => {
+                println!("Compressing: {} -> {} with {}@{}", &a.input.display(), &output_path.display(), "Brotli", a.compression_level);
+                compress_brotli(&input_file, &output_file, a.compression_level)
+            }
+        }
+    } else if a.input.is_dir() {
+        if !a.recursive { bail!("'{}' is a directory. Use -r/--recursive.", a.input.display()); }
+        let output_root = a.output.clone();
+        if let Some(dir) = &output_root {fs::create_dir_all(dir)?;}
+
+        for entry in WalkDir::new(&a.input).into_iter().filter_map(|e| e.ok()) {
+            if !entry.file_type().is_file() { continue }
+            let input_path = entry.path();
+
+            let relative = input_path.strip_prefix(&a.input)?;
+            let relative_parent = relative.parent().unwrap_or_else(|| Path::new(""));
+
+            let output_dir = if let Some(root) = &output_root {
+                let d = root.join(relative_parent);
+                fs::create_dir_all(&d)?;
+                d
+            } else {
+                input_path.parent().unwrap().to_path_buf()
+            };
+
+            // Add extension
+            let new_name = format!("{}.{}", input_path.file_name().unwrap().to_string_lossy(), a.algorithm.extension());
+            let output_path = output_dir.join(new_name);
+
+            let mut input_file = File::open(input_path)?;
+            let output_file = File::create(&output_path)?;
+
+            match a.algorithm {
+                Algorithm::Zstd => {
+                    println!("Compressing: {} -> {} with {}@{}", &input_path.display(), &output_path.display(), "ZSTD", a.compression_level);
+                    compress_zstd(&input_file, &output_file, a.compression_level as i32, a.threads.unwrap_or(1))?
+                }
+                Algorithm::Lz4 => {
+                    println!("Compressing: {} -> {} with {}", &input_path.display(), &output_path.display(), "LZ4");
+                    compress_lz4(&mut input_file, &output_file)?
+                }
+                Algorithm::Brotli => {
+                    println!("Compressing: {} -> {} with {}@{}", &input_path.display(), &output_path.display(), "Brotli", a.compression_level);
+                    compress_brotli(&input_file, &output_file, a.compression_level)?
+                }
+            }
+        }
+        Ok(())
+    } else {
+        bail!("Cannot find: {:?}", a.input);
     }
 }
 
 pub fn decompress(a: DecompressionArgs) -> Result<()> {
-    let ext = a.input.extension().unwrap().to_str().unwrap();
-    let algorithm = if a.algorithm.is_some() {
-        a.algorithm.unwrap()
-    } else {
-        match ext {
-            "zst" => Algorithm::Zstd,
-            "lz4" => Algorithm::Lz4,
-            "br" => Algorithm::Brotli,
-            _ => bail!("cannot identify compression algorithm, please specify --algorithm"),
+    if a.input.is_file() {
+        let ext = a.input.extension().and_then(|e| e.to_str()).unwrap_or("");
+        let algorithm = if let Some(alg) = a.algorithm {
+            alg
+        } else {
+            match ext {
+                "zst" => Algorithm::Zstd,
+                "lz4" => Algorithm::Lz4,
+                "br" => Algorithm::Brotli,
+                _ => bail!("cannot identify algorithm, specify --algorithm")
+            }
+        };
+
+        // remove only the compression suffix
+        let file_name = a.input.file_name().unwrap().to_string_lossy();
+        let output_name = strip_suffix(&file_name, algorithm);
+        let output_path = a.output.unwrap_or_else(|| {
+            a.input.parent().unwrap_or(Path::new("")).join(output_name)
+        });
+
+        let input_file = File::open(&a.input)?;
+        let mut output_file = File::create(&output_path)?;
+
+        match algorithm {
+            Algorithm::Zstd => {
+                println!("Decompressing: {} -> {} with {}", &a.input.display(), &output_path.display(), "ZSTD");
+                decompress_zstd(&input_file, &mut output_file)
+            },
+            Algorithm::Lz4 => {
+                println!("Decompressing: {} -> {} with {}", &a.input.display(), &output_path.display(), "LZ4");
+                decompress_lz4(&input_file, &mut output_file)
+            },
+            Algorithm::Brotli => {
+                println!("Decompressing: {} -> {} with {}", &a.input.display(), &output_path.display(), "Brotli");
+                decompress_brotli(&input_file, &mut output_file)
+            },
         }
-    };
+    } else if a.input.is_dir() {
+        if !a.recursive { bail!("'{}' is a directory. Use -r/--recursive.", a.input.display()); }
+        let output_root = a.output.clone();
+        if let Some(dir) = &output_root { fs::create_dir_all(dir)?; }
 
-    let output_path = a.output.unwrap_or_else(|| {
-        let stem = a.input.file_stem()
-            .map(|s| s.to_string_lossy().into_owned())
-            .unwrap_or_else(|| "output".to_string());
-        PathBuf::from(format!("{}", stem))
-    });
-    output_path.with_extension("");
+        for entry in WalkDir::new(&a.input).into_iter().filter_map(|e| e.ok()) {
+            if !entry.file_type().is_file() { continue; }
+            let input_path = entry.path();
+            let ext = input_path.extension().and_then(|e| e.to_str()).unwrap_or("");
 
-    let input_file = File::open(&a.input)?;
-    let mut output_file = File::create(&output_path)?;
+            let per_file_alg = if let Some(alg) = a.algorithm {
+                alg
+            } else {
+                match ext { "zst" => Algorithm::Zstd, "lz4" => Algorithm::Lz4, "br" => Algorithm::Brotli, _ => continue } // skip unknown
+            };
 
-    match algorithm {
-        Algorithm::Zstd => {
-            println!("Decompressing: {} -> {} with {}", &a.input.display(), &output_path.display(), "ZSTD");
-            decompress_zstd(&input_file, &mut output_file)
-        },
-        Algorithm::Lz4 => {
-            println!("Decompressing: {} -> {} with {}", &a.input.display(), &output_path.display(), "LZ4");
-            decompress_lz4(&input_file, &mut output_file)
-        },
-        Algorithm::Brotli => {
-            println!("Decompressing: {} -> {} with {}", &a.input.display(), &output_path.display(), "Brotli");
-            decompress_brotli(&input_file, &mut output_file)
-        },
+            let relative = input_path.strip_prefix(&a.input).unwrap();
+            let relative_parent = relative.parent().unwrap_or(Path::new(""));
+            let output_dir = if let Some(root) = &output_root {
+                let d = root.join(relative_parent);
+                fs::create_dir_all(&d)?;
+                d
+            } else {
+                input_path.parent().unwrap().to_path_buf()
+            };
+
+            let input_name = input_path.file_name().unwrap().to_string_lossy();
+            let output_name = strip_suffix(&input_name, per_file_alg);
+            let output_path = output_dir.join(output_name);
+
+            let input_file = File::open(input_path)?;
+            let mut output_file = File::create(&output_path)?;
+
+            match per_file_alg {
+                Algorithm::Zstd => {
+                    println!("Decompressing: {} -> {} with ZSTD", &input_path.display(), &output_path.display());
+                    decompress_zstd(&input_file, &mut output_file)?
+                }
+                Algorithm::Lz4 => {
+                    println!("Decompressing: {} -> {} with LZ4", &input_path.display(), &output_path.display());
+                    decompress_lz4(&input_file, &mut output_file)?
+                }
+                Algorithm::Brotli => {
+                    println!("Decompressing: {} -> {} with Brotli", &input_path.display(), &output_path.display());
+                    decompress_brotli(&input_file, &mut output_file)?
+                }
+            }
+        }
+        Ok(())
+    } else {
+        bail!("Cannot find: {:?}", a.input);
+    }
+}
+
+fn strip_suffix(name: &str, alg: Algorithm) -> String {
+    let suf = format!(".{}", alg.extension());
+    if let Some(stripped) = name.strip_suffix(&suf) {
+        stripped.to_string()
+    } else {
+        name.to_string()
     }
 }
 
