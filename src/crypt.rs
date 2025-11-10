@@ -22,6 +22,7 @@ enum Kind {
 
 
 #[derive(Args)]
+#[command[name = "encrypt", about = "Simple password-based file encryption using Argon2id with ChaCha20Poly1305"]]
 pub struct EncryptArgs {
     input: PathBuf,
     #[arg(short, long)]
@@ -37,6 +38,7 @@ pub struct EncryptArgs {
 }
 
 #[derive(Args)]
+#[command[name = "decrypt", about = "Simple file decryption for files previously encrypted with this tool"]]
 pub struct DecryptArgs {
     input: PathBuf,
     #[arg(short, long)]

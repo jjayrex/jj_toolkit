@@ -303,3 +303,38 @@ jj_toolkit decompress -a brotli file.comp -o file.txt
 # Decompressing files in a specified directory
 jj_toolkit decompress -r docs
 ```
+
+### `keygen`
+
+Generate keys.
+
+```
+Usage:
+  jj_toolkit keygen [OPTIONS] <OUTPUT>
+```
+
+**Arguments**
+
+| Name          | Description                                |
+|---------------|--------------------------------------------|
+| `<OUTPUT>`    | Name of the file name to write the keys as |
+
+**Options**
+
+| Flag                          | Description                                                |
+|-------------------------------|------------------------------------------------------------|
+| `-a, --algorithm <ALGORITHM>` | Key algorithm: `ed25519`, `rsa`, `p256` Default: `ed25519` |
+| `--bits <BITS>`               | RSA modulus size in bits Default: `3072`                   |
+| `-p, --pem_pub`               | Flag to additionally generate a `pem public key`           |
+| `-h, --help`                  | Show help                                                  |
+| `-V, --version`               | Show version                                               |
+
+**Examples:**
+
+```bash
+# Generates a private Ed25519 key 'work_key.pem' and a public OpenSSH key 'work_key.pub'
+jj_toolkit keygen work_key
+
+# Generates a 2048-bit private RSA key 'admin.pem', a public OpenSSH key 'admin.pub' and an additional public PEM key 'admin.pub.pem'
+jj_toolkit keygen -a rsa --bits 2048 -p admin
+```

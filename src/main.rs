@@ -2,6 +2,7 @@ mod hash;
 mod image;
 mod crypt;
 mod compression;
+mod keygen;
 
 use anyhow::Result;
 use clap::{Parser, Subcommand};
@@ -21,6 +22,7 @@ enum Commands {
     Decrypt(crypt::DecryptArgs),
     Compress(compression::CompressionArgs),
     Decompress(compression::DecompressionArgs),
+    Keygen(keygen::KeygenArgs),
     ImageConvert(image::ConvertArgs),
     ImageScale(image::ScaleArgs),
 }
@@ -34,6 +36,7 @@ fn main() -> Result<()> {
         Commands::Decrypt(a) => crypt::decrypt(a),
         Commands::Compress(a) => compression::compress(a),
         Commands::Decompress(a) => compression::decompress(a),
+        Commands::Keygen(a) => keygen::generate_key(a),
         Commands::ImageConvert(a) => image::convert(a),
         Commands::ImageScale(a) => image::scale(a),
     }

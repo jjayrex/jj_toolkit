@@ -14,6 +14,7 @@ pub enum ResizeMode { Fit, Fill, Exact }
 pub enum Filter { Nearest, Triangle, CatmullRom, Gaussian, Lanczos3 }
 
 #[derive(Args)]
+#[command[name = "image-convert", about = "Simple image format conversion supporting PNG, JPEG, WEBP, BMP, ICO, TIFF, TGA, DDS and PNM"]]
 pub struct ConvertArgs {
     input: PathBuf,
     #[arg(short, long, value_enum)]
@@ -29,6 +30,7 @@ pub struct ConvertArgs {
 }
 
 #[derive(Args)]
+#[command[name = "image-scale", about = "Simple image scaling using Lanczos3, Nearest, Triangle, Catmullrom or Gaussian resampling"]]
 pub struct ScaleArgs {
     input: PathBuf,
     #[arg(short, long)]

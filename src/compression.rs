@@ -6,13 +6,14 @@ use clap::{Args, ValueEnum};
 use walkdir::WalkDir;
 
 #[derive(Args)]
+#[command[name = "compression", about = "Simple file compression using Zstd, LZ4 or Brotli"]]
 pub struct CompressionArgs {
     input: PathBuf,
     #[arg(short = 'r', long)]
     recursive: bool,
-    #[arg(short, long, default_value_t = Algorithm::Zstd)]
+    #[arg(short, long, value_enum, default_value_t = Algorithm::Zstd)]
     algorithm: Algorithm,
-    #[arg(short, long, default_value = "5")]
+    #[arg(short, long, default_value_t = 5)]
     compression_level: u32,
     #[arg(short, long)]
     output: Option<PathBuf>,
@@ -21,6 +22,7 @@ pub struct CompressionArgs {
 }
 
 #[derive(Args)]
+#[command[name = "decompression", about = "Simple file decompression supporting Zstd, LZ4 or Brotli"]]
 pub struct DecompressionArgs {
     input: PathBuf,
     #[arg(short = 'r', long)]
@@ -36,16 +38,6 @@ pub enum Algorithm {
     Zstd,
     Lz4,
     Brotli,
-}
-
-impl std::fmt::Display for Algorithm {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_str(match self {
-            Algorithm::Zstd => "zstd",
-            Algorithm::Lz4 => "lz4",
-            Algorithm::Brotli => "brotli",
-        })
-    }
 }
 
 impl Algorithm {
