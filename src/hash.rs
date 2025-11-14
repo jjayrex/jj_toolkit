@@ -18,6 +18,7 @@ pub enum Algorithm {
 }
 
 #[derive(Args)]
+#[command[name = "hash", about = "Simple file hashing and manifest generation using Blake3, SHA256, SHA1 and MD5"]]
 pub struct HashArgs {
     path: PathBuf,
     #[arg(short = 'd', long)]
@@ -29,6 +30,7 @@ pub struct HashArgs {
 }
 
 #[derive(Args)]
+#[command[name = "verify-hash", about = "Simple file/manifest hash verification supporting Blake3, SHA256, SHA1 and MD5"]]
 pub struct HashVerifyArgs {
     path: PathBuf,
     #[arg(short = 'e', long)]
