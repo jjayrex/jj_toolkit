@@ -52,7 +52,20 @@ pub fn encrypt(a: EncryptArgs) -> Result<()> {
     });
 
     // Ask for password
-    let mut password = rpassword::prompt_password("Password: ")?;
+    let mut password = loop {
+        let mut pwd = rpassword::prompt_password("Password: ")?;
+        let mut confirm = rpassword::prompt_password("Repeat password: ")?;
+
+        if pwd == confirm {
+            confirm.zeroize();
+            break pwd;
+        } else {
+            confirm.zeroize();
+            pwd.zeroize();
+            eprintln!("Passwords do not match. Please try again.");
+        }
+    };
+
     let kdf_params =
         Params::new(a.m_cost_kib, a.t_cost, a.p_cost, None).context("invalid Argon2 params")?;
     let argon2 = Argon2::new(Algorithm::Argon2id, Version::V0x13, kdf_params);
