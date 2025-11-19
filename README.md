@@ -327,7 +327,6 @@ Usage:
 | `--bits <BITS>`               | RSA modulus size in bits Default: `3072`                   |
 | `-p, --pem_pub`               | Flag to additionally generate a `pem public key`           |
 | `-h, --help`                  | Show help                                                  |
-| `-V, --version`               | Show version                                               |
 
 **Examples:**
 
@@ -337,4 +336,37 @@ jj_toolkit keygen work_key
 
 # Generates a 2048-bit private RSA key 'admin.pem', a public OpenSSH key 'admin.pub' and an additional public PEM key 'admin.pub.pem'
 jj_toolkit keygen -a rsa --bits 2048 -p admin
+```
+
+### `format`
+
+Convert serialization formats between JSON, BSON and BINCODE.
+
+```
+Usage:
+  jj_toolkit format [OPTIONS] <INPUT>
+```
+
+**Arguments**
+
+| Name        | Description             |
+|-------------|-------------------------|
+| `<INPUT>`   | Path to the source file |
+
+**Options**
+
+| Flag                    | Description                                              |
+|-------------------------|----------------------------------------------------------|
+| `-f, --format <FORMAT>` | Output format: `json`, `bson`, `bincode` Default: `bson` |
+| `-h, --help`            | Show help                                                |
+| `-o, --output <OUTPUT>` | Output path. Default: `<INPUT>.<FORMAT>`                 |
+
+**Examples:**
+
+```bash
+# Converts catalog.json to catalog.bson
+jj_toolkit format catalog.json
+
+# Converts entry.bson to data.bin
+jj_toolkit format entry.bson -f bincode --output data.bin
 ```
