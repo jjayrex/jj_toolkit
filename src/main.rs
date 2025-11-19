@@ -3,6 +3,7 @@ mod image;
 mod crypt;
 mod compression;
 mod keygen;
+mod format;
 
 use anyhow::Result;
 use clap::{Parser, Subcommand};
@@ -23,6 +24,7 @@ enum Commands {
     Compress(compression::CompressionArgs),
     Decompress(compression::DecompressionArgs),
     Keygen(keygen::KeygenArgs),
+    Format(format::FormatArgs),
     ImageConvert(image::ConvertArgs),
     ImageScale(image::ScaleArgs),
 }
@@ -37,6 +39,7 @@ fn main() -> Result<()> {
         Commands::Compress(a) => compression::compress(a),
         Commands::Decompress(a) => compression::decompress(a),
         Commands::Keygen(a) => keygen::generate_key(a),
+        Commands::Format(a) => format::format_convert(a),
         Commands::ImageConvert(a) => image::convert(a),
         Commands::ImageScale(a) => image::scale(a),
     }

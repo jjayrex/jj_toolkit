@@ -1,6 +1,6 @@
 [package]
 name = "jj_toolkit"
-version = "0.7.1"
+version = "0.8.0"
 edition = "2024"
 build = "build.rs"
 authors = ["JJayRex"]
@@ -28,12 +28,16 @@ zstd = { version = "0.13", features = ["zstdmt"] }
 lz4_flex = "0.11"
 brotli2 = "0.3"
 ed25519-dalek = { version = "2.2", features = ["pkcs8", "rand_core"] }
-rsa = { version = "0.9"}
+rsa = { version = "0.9" }
 p256 = { version = "0.13", features = ["pkcs8"] }
 pkcs8 = { version = "0.10", features = ["pem"] }
 ssh-key = { version = "0.6", features = ["ed25519", "rsa", "p256"] }
-rand_core_new = {package = "rand_core", version = "0.10.0-rc.2"}
-rand_core_old = {package = "rand_core", version = "0.6.4" }
+rand_core_new = { package = "rand_core", version = "0.10.0-rc.2" }
+rand_core_old = { package = "rand_core", version = "0.6.4" }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+bson = { version = "3", features = ["serde"] }
+bincode = { version = "2", features = ["serde"] }
 
 [profile.release]
 opt-level = 3
