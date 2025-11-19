@@ -1,6 +1,6 @@
 [package]
 name = "jj_toolkit"
-version = "0.8.0"
+version = "0.8.1"
 edition = "2024"
 build = "build.rs"
 authors = ["JJayRex"]
@@ -16,6 +16,8 @@ blake3 = "1"
 md-5 = "0.11.0-rc.2"
 sha2 = "0.11.0-rc.2"
 sha1 = "0.11.0-rc.2"
+crc32fast = "1"
+crc32c = "0.6"
 hex = "0.4"
 image = { version = "0.25", default-features = false, features = ["png", "jpeg", "webp", "bmp", "ico", "tiff", "tga", "dds", "pnm"] }
 argon2 = "0.6.0-rc.2"

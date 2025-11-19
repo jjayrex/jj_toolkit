@@ -15,6 +15,8 @@ pub enum Algorithm {
     Md5,
     Sha1,
     Sha256,
+    Crc32,
+    Crc32c,
 }
 
 #[derive(Args)]
@@ -25,6 +27,8 @@ pub struct HashArgs {
     directory: bool,
     #[arg(short, long, default_value_t = Algorithm::Blake3)]
     algorithm: Algorithm,
+    #[arg(long)]
+    decimal: bool,
     #[arg(short, long)]
     output: Option<PathBuf>,
 }
@@ -37,6 +41,8 @@ pub struct HashVerifyArgs {
     expected: Option<String>,
     #[arg(short, long)]
     algorithm: Option<Algorithm>,
+    #[arg(long)]
+    decimal: bool,
 }
 
 impl std::fmt::Display for Algorithm {
@@ -46,12 +52,25 @@ impl std::fmt::Display for Algorithm {
             Algorithm::Md5 => "md5",
             Algorithm::Sha1 => "sha1",
             Algorithm::Sha256 => "sha256",
+            Algorithm::Crc32 => "crc32",
+            Algorithm::Crc32c => "crc32c",
         })
     }
 }
 
 // CORE
-fn hash_reader(mut r: impl Read, algorithm: Algorithm) -> Result<String> {
+
+fn ensure_decimal_supported(algorithm: Algorithm, decimal: bool) -> Result<()> {
+    if decimal {
+        match algorithm {
+            Algorithm::Crc32 | Algorithm::Crc32c => Ok(()),
+            _ => bail!("--decimal is only supported for CRC32 and CRC32C algorithms"),
+        }
+    } else {
+        Ok(())
+    }
+}
+fn hash_reader(mut r: impl Read, algorithm: Algorithm, decimal: bool) -> Result<String> {
     const BUFFER: usize = 1024 * 1024;
     match algorithm {
         Algorithm::Blake3 => {
@@ -109,16 +128,51 @@ fn hash_reader(mut r: impl Read, algorithm: Algorithm) -> Result<String> {
             let output = h.finalize();
             Ok(encode_upper(output))
         }
+        Algorithm::Crc32 => {
+            let mut h = crc32fast::Hasher::new();
+            let mut buf = vec![0u8; BUFFER];
+            loop {
+                let n = r.read(&mut buf)?;
+                if n == 0 {
+                    break;
+                }
+                h.update(&buf[..n]);
+            }
+            let value = h.finalize();
+            if decimal {
+                Ok(value.to_string())
+            } else {
+                Ok(format!("{:08X}", value))
+            }
+        }
+        Algorithm::Crc32c => {
+            let mut crc: u32 = 0;
+            let mut buf = vec![0u8; BUFFER];
+            loop {
+                let n = r.read(&mut buf)?;
+                if n == 0 {
+                    break;
+                }
+                crc = crc32c::crc32c_append(crc, &buf[..n]);
+            }
+            if decimal {
+                Ok(crc.to_string())
+            } else {
+                Ok(format!("{:08X}", crc))
+            }
+        }
     }
 }
 
-fn hash_file(path: &Path, algorithm: Algorithm) -> Result<String> {
+fn hash_file(path: &Path, algorithm: Algorithm, decimal: bool) -> Result<String> {
     let f = File::open(path).with_context(|| format!("open {}", path.display()))?;
-    hash_reader(f, algorithm)
+    hash_reader(f, algorithm, decimal)
 }
 
 // COMMANDS
 pub fn hash(a: HashArgs) -> Result<()> {
+    ensure_decimal_supported(a.algorithm, a.decimal)?;
+
     if a.directory {
         let root = fs::canonicalize(&a.path).unwrap_or(a.path.clone());
         let top = root
@@ -146,14 +200,14 @@ pub fn hash(a: HashArgs) -> Result<()> {
             let line_path_unix = rel_with_top.to_string_lossy().replace('\\', "/");
             let line_path_win = rel_with_top.to_string_lossy().replace('/', "\\");
 
-            let hex = hash_file(abs, a.algorithm)?;
+            let hex = hash_file(abs, a.algorithm, a.decimal)?;
             writeln!(out, "#{}#{}", a.algorithm, line_path_win)?;
             writeln!(out, "{} *{}", hex, line_path_unix)?;
         }
 
         println!("Wrote manifest: {}", out_path.display());
     } else {
-        let hex = hash_file(&a.path, a.algorithm)?;
+        let hex = hash_file(&a.path, a.algorithm, a.decimal)?;
         if let Some(out) = a.output {
             let name = a
                 .path
@@ -176,9 +230,11 @@ pub fn hash(a: HashArgs) -> Result<()> {
 pub fn hash_verify(a: HashVerifyArgs) -> Result<()> {
     if a.expected.is_some() {
         let expected = a.expected.context("error with provided --expected")?;
-        let algorithm = if a.algorithm.is_none() { Algorithm::Blake3 } else { a.algorithm.unwrap() };
+        let algorithm = a.algorithm.unwrap_or(Algorithm::Blake3);
 
-        let got = hash_file(&a.path, algorithm)?;
+        ensure_decimal_supported(algorithm, a.decimal)?;
+
+        let got = hash_file(&a.path, algorithm, a.decimal)?;
         if eq_hex(&got, &expected) {
             println!("OK  {}", a.path.display());
             Ok(())
@@ -196,6 +252,8 @@ pub fn hash_verify(a: HashVerifyArgs) -> Result<()> {
         if map_expected.is_empty() {
             bail!("manifest has no entries");
         }
+
+        ensure_decimal_supported(algo, a.decimal)?;
 
         // Detect top prefix from first key: "TopDir/inner/file"
         let first_key = map_expected.keys().next().unwrap();
@@ -241,7 +299,7 @@ pub fn hash_verify(a: HashVerifyArgs) -> Result<()> {
                 rel_unix
             };
 
-            let got = hash_file(p, algo)?;
+            let got = hash_file(p, algo, a.decimal)?;
             seen.insert(key.clone());
             if let Some(exp) = map_expected.get(&key) {
                 if !eq_hex(&got, exp) {
@@ -294,6 +352,8 @@ fn parse_algorithm(s: &str) -> Result<Algorithm> {
         "md5" => Algorithm::Md5,
         "sha1" => Algorithm::Sha1,
         "sha256" => Algorithm::Sha256,
+        "crc32" => Algorithm::Crc32,
+        "crc32c" => Algorithm::Crc32c,
         _ => bail!("unknown algorithm '{s}'"),
     };
     Ok(a)
@@ -329,12 +389,11 @@ fn read_manifest(path: &Path) -> Result<(Algorithm, BTreeMap<String, String>)> {
             }
         }
 
-        // body: "<HEX> *path"
-        if let Some((hex, p)) = t.split_once(" *") {
+        // body: "<HASH> *path" (hash may be hex or decimal)
+        if let Some((hash, p)) = t.split_once(" *") {
             let path_unix = p.replace('\\', "/");
-            // prefer body path; fall back to header if consistent
             let key = path_unix.clone();
-            map.insert(key, hex.trim().to_string());
+            map.insert(key, hash.trim().to_string());
             last_path_unified = None;
         } else if let Some(prev) = last_path_unified.take() {
             // tolerate body without leading " *"

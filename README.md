@@ -26,6 +26,7 @@ Usage:
 | `-a, --algorithm <ALGORITHM>` | Hashing algorithm: `blake3`, `sha256`, `sha1`, `md5` Default: `blake3` |
 | `-o, --output <OUTPUT>`       | Write output to file instead of stdout                                 |
 | `-d, --directory`             | Flag to hash a directory                                               |
+| `--decimal`                   | Flag to save hash using decimal base. Supports: `crc32`, `crc32c`      |
 | `-h, --help`                  | Show help                                                              |
 | `-V, --version`               | Show version                                                           |
 
@@ -63,6 +64,7 @@ Usage:
 | `-a, --algorithm <ALGORITHM>` | Hashing algorithm: `blake3`, `sha256`, `sha1`, `md5` Default: `blake3` |
 | `-o, --output <OUTPUT>`       | Write output to file instead of stdout                                 |
 | `-e, --expected <EXPECTED>`   | Expected hash string for `verify-file`                                 |
+| `--decimal`                   | Flag to verify hash using decimal base. Supports: `crc32`, `crc32c`    |
 | `-h, --help`                  | Show help                                                              |
 | `-V, --version`               | Show version                                                           |
 
