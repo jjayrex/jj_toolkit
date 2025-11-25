@@ -4,6 +4,7 @@ mod crypt;
 mod compression;
 mod keygen;
 mod format;
+mod steganography;
 
 use anyhow::Result;
 use clap::{Parser, Subcommand};
@@ -27,6 +28,8 @@ enum Commands {
     Format(format::FormatArgs),
     ImageConvert(image::ConvertArgs),
     ImageScale(image::ScaleArgs),
+    SteganoEmbed(steganography::EmbedArgs),
+    SteganoExtract(steganography::ExtractArgs),
 }
 
 fn main() -> Result<()> {
@@ -42,5 +45,7 @@ fn main() -> Result<()> {
         Commands::Format(a) => format::format_convert(a),
         Commands::ImageConvert(a) => image::convert(a),
         Commands::ImageScale(a) => image::scale(a),
+        Commands::SteganoEmbed(a) => steganography::embed(a),
+        Commands::SteganoExtract(a) => steganography::extract(a),
     }
 }

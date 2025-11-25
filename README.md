@@ -360,8 +360,8 @@ Usage:
 | Flag                    | Description                                              |
 |-------------------------|----------------------------------------------------------|
 | `-f, --format <FORMAT>` | Output format: `json`, `bson`, `bincode` Default: `bson` |
-| `-h, --help`            | Show help                                                |
 | `-o, --output <OUTPUT>` | Output path. Default: `<INPUT>.<FORMAT>`                 |
+| `-h, --help`            | Show help                                                |
 
 **Examples:**
 
@@ -371,4 +371,70 @@ jj_toolkit format catalog.json
 
 # Converts entry.bson to data.bin
 jj_toolkit format entry.bson -f bincode --output data.bin
+```
+
+### `stegano-embed`
+
+Embed a message/file inside a PNG or BMP file using LSB steganography.
+
+```
+Usage:
+  jj_toolkit stegano-embed [OPTIONS] <INPUT>
+```
+
+**Arguments**
+
+| Name        | Description             |
+|-------------|-------------------------|
+| `<INPUT>`   | Path to the source file |
+
+**Options**
+
+| Flag                      | Description                              |
+|---------------------------|------------------------------------------|
+| `-m, --message <MESSAGE>` | Message to embed inside the image        |
+| `-f, --file <FILE>`       | File to embed inside the image           |
+| `-o, --output <OUTPUT>`   | Output path. Default: `<INPUT>_embedded` |
+| `-h, --help`              | Show help                                |
+
+**Examples:**
+
+```bash
+# Embeds a message inside the image
+jj_toolkit stegano-embed cat.png -m "Nice kitty"
+
+# Embeds a file inside the image, saved as custom output
+jj_toolkit stegano-embed dog.bmp --file bird.jpg -o dog_with_bird.bmp
+```
+
+### `stegano-extract`
+
+Extracts a message/file from inside a PNG or BMP file using LSB steganography.
+
+```
+Usage:
+  jj_toolkit stegano-extract [OPTIONS] <INPUT>
+```
+
+**Arguments**
+
+| Name        | Description             |
+|-------------|-------------------------|
+| `<INPUT>`   | Path to the source file |
+
+**Options**
+
+| Flag                      | Description                            |
+|---------------------------|----------------------------------------|
+| `-o, --output <OUTPUT>`   | Output path. Default prints to console |
+| `-h, --help`              | Show help                              |
+
+**Examples:**
+
+```bash
+# Extracts a message from the image and prints it to console
+jj_toolkit stegano-extract cat_with_secret.png
+
+# Extracts a file from the image and saves it to the output
+jj_toolkit stegano-extract dog_with_bird.bmp -o bird.jpg
 ```
