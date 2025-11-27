@@ -28,6 +28,7 @@ enum Commands {
     Format(format::FormatArgs),
     ImageConvert(image::ConvertArgs),
     ImageScale(image::ScaleArgs),
+    ImageGetcolor(image::GetColorArgs),
     SteganoEmbed(steganography::EmbedArgs),
     SteganoExtract(steganography::ExtractArgs),
 }
@@ -45,6 +46,7 @@ fn main() -> Result<()> {
         Commands::Format(a) => format::format_convert(a),
         Commands::ImageConvert(a) => image::convert(a),
         Commands::ImageScale(a) => image::scale(a),
+        Commands::ImageGetcolor(a) => image::get_color(a),
         Commands::SteganoEmbed(a) => steganography::embed(a),
         Commands::SteganoExtract(a) => steganography::extract(a),
     }

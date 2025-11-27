@@ -2,7 +2,9 @@ use anyhow::{bail, Context, Result};
 use clap::{Args, ValueEnum};
 use std::fs::File;
 use std::path::{Path, PathBuf};
-use image::{GenericImageView, ImageEncoder};
+use std::io::{BufWriter, Write};
+use std::collections::BTreeSet;
+use image::{GenericImageView, ImageEncoder, ImageError};
 
 #[derive(Clone, Copy, ValueEnum, Debug)]
 pub enum ImageFormat { Png, Jpeg, Webp, Bmp, Ico, Tiff, Tga, Dds, Pnm }
@@ -45,6 +47,14 @@ pub struct ScaleArgs {
     // Resampling filter
     #[arg(long, value_enum, default_value_t = Filter::Lanczos3)]
     filter: Filter,
+    #[arg(short, long)]
+    output: Option<PathBuf>,
+}
+
+#[derive(Args)]
+#[command[name = "image-getcolor", about = "Get all colors present in an image"]]
+pub struct GetColorArgs {
+    input: PathBuf,
     #[arg(short, long)]
     output: Option<PathBuf>,
 }
@@ -110,6 +120,35 @@ pub fn scale(a: ScaleArgs) -> Result<()> {
 
     output_image.save(&output)?;
     println!("Wrote {}", output.display());
+    Ok(())
+}
+
+pub fn get_color(a: GetColorArgs) -> Result<()> {
+    let image = image::open(&a.input).with_context(|| format!("failed to open image: {}", a.input.display()))?;
+
+    let rgba = image.to_rgba8();
+    let mut unique_colors = BTreeSet::<u32>::new();
+
+    for pixel in rgba.pixels() {
+        let [r, g, b, a] = pixel.0;
+        let packed = u32::from_be_bytes([r, g, b, a]);
+        unique_colors.insert(packed);
+    }
+
+    match a.output {
+        Some(path) => {
+            let file = File::create(&path).with_context(|| {
+                format!("failed to create output file: {}", path.to_string_lossy())
+            })?;
+            let mut writer = BufWriter::new(file);
+            write_colors(&mut writer, &unique_colors)?;
+        }
+        None => {
+            let mut stdout = BufWriter::new(std::io::stdout());
+            write_colors(&mut stdout, &unique_colors)?;
+        }
+    }
+
     Ok(())
 }
 
@@ -251,4 +290,13 @@ fn cover_size(w: u32, h: u32, tw: u32, th: u32) -> (u32, u32) {
         let scale = tw as f32 / w as f32;
         (tw, (h as f32 * scale).round() as u32)
     }
+}
+
+fn write_colors<W: Write>(mut writer: W, colors: &BTreeSet<u32>) -> Result<()> {
+    for packed in colors {
+        let [r, g, b, a] = packed.to_be_bytes();
+        // Hex format: #RRGGBBAA
+        writeln!(&mut writer, "#{:02X}{:02X}{:02X}{:02X}", r, g, b, a)?;
+    }
+    Ok(())
 }

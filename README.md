@@ -161,6 +161,40 @@ jj_toolkit image-scale ui.png --width 800 --height 600 --mode exact --filter tri
 
 ```
 
+### `image-getcolor`
+
+Get colors from an image
+
+```
+Usage:
+  jj_toolkit image-getcolor [OPTIONS] <INPUT>
+```
+
+**Arguments**
+
+| Name       | Description                |
+|------------|----------------------------|
+| `<INPUT>`  | Path to the source image   |
+
+**Options**
+
+| Flag                      | Description                            |
+|---------------------------|----------------------------------------|
+| `-o, --output <OUTPUT>`   | Output path. Default prints to console |
+| `-h, --help`              | Show help                              |
+
+
+**Examples**
+
+```bash
+# Prints colors present in an image
+jj_toolkit image-getcolor cat.png
+
+# Saves colors present in the image to a txt file
+jj_toolkit image-getcolor dog.png -o dog_colors.txt
+
+```
+
 ### `encrypt`
 
 Encrypt files/directories.
@@ -280,9 +314,9 @@ Usage:
 
 **Arguments**
 
-| Name      | Description             |
-| --------- |-------------------------|
-| `<INPUT>` | Path to the source file |
+| Name       | Description              |
+|------------|--------------------------|
+| `<INPUT>`  | Path to the source file  |
 
 **Options**
 
