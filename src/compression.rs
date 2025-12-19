@@ -6,7 +6,7 @@ use clap::{Args, ValueEnum};
 use walkdir::WalkDir;
 
 #[derive(Args)]
-#[command[name = "compression", about = "Simple file compression using Zstd, LZ4 or Brotli"]]
+#[command[name = "compression", about = "Simple file compression using Zstd, LZ4, Brotli or Snappy"]]
 pub struct CompressionArgs {
     input: PathBuf,
     #[arg(short = 'r', long)]
@@ -22,7 +22,7 @@ pub struct CompressionArgs {
 }
 
 #[derive(Args)]
-#[command[name = "decompression", about = "Simple file decompression supporting Zstd, LZ4 or Brotli"]]
+#[command[name = "decompression", about = "Simple file decompression supporting Zstd, LZ4, Brotli or Snappy"]]
 pub struct DecompressionArgs {
     input: PathBuf,
     #[arg(short = 'r', long)]
@@ -38,6 +38,7 @@ pub enum Algorithm {
     Zstd,
     Lz4,
     Brotli,
+    Snappy,
 }
 
 impl Algorithm {
@@ -46,6 +47,7 @@ impl Algorithm {
             Algorithm::Zstd => "zst",
             Algorithm::Lz4 => "lz4",
             Algorithm::Brotli => "br",
+            Algorithm::Snappy => "sz",
         }
     }
 }
@@ -74,6 +76,10 @@ pub fn compress(a: CompressionArgs) -> Result<()> {
             Algorithm::Brotli => {
                 println!("Compressing: {} -> {} with {}@{}", &a.input.display(), &output_path.display(), "Brotli", a.compression_level);
                 compress_brotli(&input_file, &output_file, a.compression_level)
+            }
+            Algorithm::Snappy => {
+                println!("Compressing: {} -> {} with {}", &a.input.display(), &output_path.display(), "Snappy");
+                compress_snappy(&mut input_file, &output_file)
             }
         }
     } else if a.input.is_dir() {
@@ -115,6 +121,10 @@ pub fn compress(a: CompressionArgs) -> Result<()> {
                 Algorithm::Brotli => {
                     println!("Compressing: {} -> {} with {}@{}", &input_path.display(), &output_path.display(), "Brotli", a.compression_level);
                     compress_brotli(&input_file, &output_file, a.compression_level)?
+                }
+                Algorithm::Snappy => {
+                    println!("Compressing: {} -> {} with {}", &input_path.display(), &output_path.display(), "Snappy");
+                    compress_snappy(&mut input_file, &output_file)?
                 }
             }
         }
@@ -160,6 +170,10 @@ pub fn decompress(a: DecompressionArgs) -> Result<()> {
             Algorithm::Brotli => {
                 println!("Decompressing: {} -> {} with {}", &a.input.display(), &output_path.display(), "Brotli");
                 decompress_brotli(&input_file, &mut output_file)
+            },
+            Algorithm::Snappy => {
+                println!("Decompressing: {} -> {} with {}", &a.input.display(), &output_path.display(), "Snappy");
+                decompress_snappy(&input_file, &mut output_file)
             },
         }
     } else if a.input.is_dir() {
@@ -212,6 +226,10 @@ pub fn decompress(a: DecompressionArgs) -> Result<()> {
                     println!("Decompressing: {} -> {} with Brotli", &input_path.display(), &output_path.display());
                     decompress_brotli(&input_file, &mut output_file)?
                 }
+                Algorithm::Snappy => {
+                    println!("Decompressing: {} -> {} with Snappy", &input_path.display(), &output_path.display());
+                    decompress_snappy(&input_file, &mut output_file)?
+                }
             }
         }
         Ok(())
@@ -234,6 +252,7 @@ fn check_extension(ext: &str) -> Option<Algorithm> {
         "zst" => Some(Algorithm::Zstd),
         "lz4" => Some(Algorithm::Lz4),
         "br" => Some(Algorithm::Brotli),
+        "sz" => Some(Algorithm::Snappy),
         _ => None,
     }
 }
@@ -252,6 +271,11 @@ fn sniff_magic(path: &Path) -> Result<Option<Algorithm>> {
     // LZ4 Magic: 04 22 4D 18
     if buffer == [0x04, 0x22, 0x4D, 0x18] {
         return Ok(Some(Algorithm::Lz4));
+    }
+
+    // Snappy Magic: 73 4E 61 50 70 59 (only first 4 bytes used)
+    if buffer == [0x73, 0x4E, 0x61, 0x50] {
+        return Ok(Some(Algorithm::Snappy));
     }
 
     Ok(None)
@@ -333,5 +357,24 @@ fn decompress_brotli(input: &File, output: &File) -> Result<()> {
 
     std::io::copy(&mut reader, &mut decoder)?;
     decoder.flush()?;
+    Ok(())
+}
+
+fn compress_snappy(input: &mut File, output: &File) -> Result<()> {
+    let mut encoder = snap::write::FrameEncoder::new(output);
+
+    let mut buffer = vec![0u8; 1 << 20];
+    loop {
+        let n = input.read(&mut buffer)?;
+        if n == 0 { break }
+        encoder.write_all(&buffer[..n])?;
+    }
+    encoder.flush()?;
+    Ok(())
+}
+
+fn decompress_snappy(input: &File, mut output: &mut File) -> Result<()> {
+    let mut decoder = snap::read::FrameDecoder::new(input);
+    std::io::copy(&mut decoder, &mut output)?;
     Ok(())
 }

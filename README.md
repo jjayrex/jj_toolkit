@@ -281,14 +281,14 @@ Usage:
 
 **Options**
 
-| Flag                          | Description                                                    |
-|-------------------------------|----------------------------------------------------------------|
-| `-a, --algorithm <ALGORITHM>` | Compression algorithm: `zstd`, `lz4`, `brotli` Default: `zstd` |
-| `-r, --recursive `            | Flag to compress files recursively in a directory              |
-| `-c, --compression_level`     | Compression level: `zstd [-7..22]`, `brotli [0..11]`           |
-| `-t, --threads`               | Number of threads to use for `zstd` compression                |
-| `-o, --output <OUTPUT>`       | Output path. Default: `<INPUT>.<ALGORITHM>`                    |
-| `-h, --help`                  | Show help                                                      |
+| Flag                          | Description                                                              |
+|-------------------------------|--------------------------------------------------------------------------|
+| `-a, --algorithm <ALGORITHM>` | Compression algorithm: `zstd`, `lz4`, `brotli`, `snappy` Default: `zstd` |
+| `-r, --recursive `            | Flag to compress files recursively in a directory                        |
+| `-c, --compression_level`     | Compression level: `zstd [-7..22]`, `brotli [0..11]`                     |
+| `-t, --threads`               | Number of threads to use for `zstd` compression                          |
+| `-o, --output <OUTPUT>`       | Output path. Default: `<INPUT>.<ALGORITHM>`                              |
+| `-h, --help`                  | Show help                                                                |
 
 **Examples**
 
@@ -320,12 +320,12 @@ Usage:
 
 **Options**
 
-| Flag                           | Description                                                                  |
-|--------------------------------|------------------------------------------------------------------------------|
-| `-a, --algorithm <ALGORITHM>`  | Compression algorithm in case it cannot me inferred: `zstd`, `lz4`, `brotli` |
-| `-r, --recursive `             | Flag to decompress files recursively in a directory                          |
-| `-o, --output <OUTPUT>`        | Output path. Default: `<INPUT>.<FORMAT>`                                     |
-| `-h, --help`                   | Show help                                                                    |
+| Flag                           | Description                                                                            |
+|--------------------------------|----------------------------------------------------------------------------------------|
+| `-a, --algorithm <ALGORITHM>`  | Compression algorithm in case it cannot me inferred: `zstd`, `lz4`, `brotli`, `snappy` |
+| `-r, --recursive `             | Flag to decompress files recursively in a directory                                    |
+| `-o, --output <OUTPUT>`        | Output path. Default: `<INPUT>.<FORMAT>`                                               |
+| `-h, --help`                   | Show help                                                                              |
 
 **Examples**
 
