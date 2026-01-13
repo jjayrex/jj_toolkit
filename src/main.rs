@@ -5,6 +5,7 @@ mod compression;
 mod keygen;
 mod format;
 mod steganography;
+mod raster;
 
 use anyhow::Result;
 use clap::{Parser, Subcommand};
@@ -31,6 +32,7 @@ enum Commands {
     ImageGetcolor(image::GetColorArgs),
     SteganoEmbed(steganography::EmbedArgs),
     SteganoExtract(steganography::ExtractArgs),
+    Rasterize(raster::RasterizeArgs)
 }
 
 fn main() -> Result<()> {
@@ -49,5 +51,6 @@ fn main() -> Result<()> {
         Commands::ImageGetcolor(a) => image::get_color(a),
         Commands::SteganoEmbed(a) => steganography::embed(a),
         Commands::SteganoExtract(a) => steganography::extract(a),
+        Commands::Rasterize(a) => raster::rasterize(a),
     }
 }

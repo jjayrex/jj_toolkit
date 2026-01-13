@@ -4,7 +4,7 @@ use std::fs::File;
 use std::path::{Path, PathBuf};
 use std::io::{BufWriter, Write};
 use std::collections::BTreeSet;
-use image::{GenericImageView, ImageEncoder, ImageError};
+use image::{GenericImageView, ImageEncoder};
 
 #[derive(Clone, Copy, ValueEnum, Debug)]
 pub enum ImageFormat { Png, Jpeg, Webp, Bmp, Ico, Tiff, Tga, Dds, Pnm }
