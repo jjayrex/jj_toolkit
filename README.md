@@ -472,3 +472,42 @@ jj_toolkit stegano-extract cat_with_secret.png
 # Extracts a file from the image and saves it to the output
 jj_toolkit stegano-extract dog_with_bird.bmp -o bird.jpg
 ```
+
+### `rasterize`
+
+Rasterize SVG images to PNG or BMP.
+
+```
+Usage:
+  jj_toolkit rasterize [OPTIONS] <INPUT>
+```
+
+**Arguments**
+
+| Name        | Description             |
+|-------------|-------------------------|
+| `<INPUT>`   | Path to the source file |
+
+**Options**
+
+| Flag                    | Description                                                                                    |
+|-------------------------|------------------------------------------------------------------------------------------------|
+| `-f, --format <FORMAT>` | Output format: `png`, `bmp` Default `png`                                                      |
+| `--width <WIDTH>`       | Define the width of the output image                                                           |
+| `--height <HEIGHT>`     | Define the height of the output image                                                          |
+| `-s, --scale <FACTOR>`  | Scale factor (applied after `--width`/`--height`)                                              |
+| `-r, --recursive`       | Render images in recursive directories                                                         |
+| `--threads`             | Specify the amount of threads to use for batch rendering. If`0` or `unset`, uses rayon default |
+| `--overwrite`           | Flag to decide if a file should be overwritten if it exists                                    |
+| `-o, --output <OUTPUT>` | Output path                                                                                    |
+| `-h, --help`            | Show help                                                                                      |
+
+**Examples:**
+
+```bash
+# Renders logo.svg to a 512px high PNG image
+jj_toolkit rasterize --width 512 logo.svg
+
+# Renders all SVG images inside 'covers' folder and in each subsequent folder into .bmp files places inside 'covers_converted'
+jj_toolkit rasterize -f bmp -r covers -o covers_converted
+```
